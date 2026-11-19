@@ -461,6 +461,8 @@ footer p{max-width:1100px;margin-top:10px}
 .mapcard img{filter:none}
 .planpair{display:grid;grid-template-columns:1fr 1fr;gap:clamp(16px,2vw,32px);margin-top:clamp(30px,4vw,56px)}.planpair figure{display:block;margin:0;background:#fff;padding:clamp(12px,2vw,28px);cursor:zoom-in}.planpair img{width:100%;height:auto;display:block}.planpair figcaption{margin-top:12px;color:var(--mute)}@media(max-width:800px){.planpair{grid-template-columns:1fr}}
 .neighbors{margin-top:26px;color:var(--mute);font-size:15px}
+.tour iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+@media(max-width:700px){.vid.tour{aspect-ratio:4/5}}
 </style>
 </head>
 <body>
@@ -523,6 +525,27 @@ footer p{max-width:1100px;margin-top:10px}
       <div class="pillar fade"><div class="n">01</div><h3>Main-level primary</h3><p>The primary suite sits on the first floor with a large ensuite bath, soaking tub and a walk-in closet.</p></div>
       <div class="pillar fade"><div class="n">02</div><h3>A 17 x 32 bonus room</h3><p>Upstairs, two bedrooms, two full baths and an oversized bonus room for a theater, gym or playroom.</p></div>
       <div class="pillar fade"><div class="n">03</div><h3>The big stuff, done</h3><p>2019 roof, HVAC from 2019 and 2025, a gas tankless water heater and motorized blinds in the great room.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="film pad" id="film" aria-label="The film">
+  <div class="wrap">
+    <div class="head fade">
+      <div><div class="eyebrow red">Watch</div><div class="h2">The <em>Film</em></div></div>
+      <p>From the gate at Park Creek to the fenced backyard.</p>
+    </div>
+    <div class="vid wide fade" data-src="film/film.m3u8">
+      <video playsinline preload="none" poster="images/film-poster.jpg"></video>
+      <div class="ov"><div class="play"><i></i></div><span class="eyebrow">Play the film · 1:46</span></div>
+    </div>
+    <div class="head fade" style="margin-top:clamp(60px,8vw,120px)">
+      <div><div class="eyebrow red">Walk it yourself</div><div class="h2">3D <em>Tour</em></div></div>
+      <p>Move room to room at your own pace, upstairs and down.</p>
+    </div>
+    <div class="vid wide tour fade" data-tour="https://www.zillow.com/view-imx/837c9bfc-bee5-481e-8092-5aaaa21be635?wl=true&amp;setAttribution=mls&amp;initialViewType=pano">
+      <img src="images/photos/f/010.jpg" alt="Great room" style="width:100%;height:100%;object-fit:cover;display:block">
+      <div class="ov"><div class="play"><i></i></div><span class="eyebrow">Start the 3D tour</span></div>
     </div>
   </div>
 </section>
@@ -709,6 +732,27 @@ addEventListener('keydown', e => { if (!lb.classList.contains('open') || !lbIn.q
 let tx = null; lb.addEventListener('touchstart', e => tx = e.touches[0].clientX, { passive: true });
 lb.addEventListener('touchend', e => { if (tx === null || !lbIn.querySelector('.lbfig')) return; const dx = e.changedTouches[0].clientX - tx; tx = null;
   if (Math.abs(dx) > 50) showPh(phI + (dx < 0 ? 1 : -1)); });
+// film: HLS (Safari native, hls.js elsewhere); pause when scrolled away
+const vids = $$('.vid:not(.tour)');
+$$('.tour').forEach(t => t.onclick = () => { if (t.classList.contains('playing')) return; vids.forEach(o => o.querySelector('video').pause()); t.classList.add('playing');
+  t.insertAdjacentHTML('beforeend', `<iframe src="${t.dataset.tour}" title="6671 Fox Ridge Cir 3D tour" allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer" allowfullscreen></iframe>`); });
+const hlsLib = () => window.Hls ? Promise.resolve() : new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
+vids.forEach(box => {
+  const v = box.querySelector('video');
+  box.addEventListener('click', async () => {
+    if (box.classList.contains('playing')) return;
+    vids.forEach(o => { if (o !== box) o.querySelector('video').pause(); });
+    if (!box.dataset.ready) {
+      box.dataset.ready = 1;
+      if (v.canPlayType('application/vnd.apple.mpegurl')) v.src = box.dataset.src;
+      else { await hlsLib(); const h = new Hls({ capLevelToPlayerSize: true }); h.loadSource(box.dataset.src); h.attachMedia(v); }
+    }
+    v.controls = true; box.classList.add('playing'); v.play().catch(() => {});
+  });
+  v.addEventListener('ended', () => { box.classList.remove('playing'); v.controls = false; v.currentTime = 0; });
+});
+const vo = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting) e.target.querySelector('video').pause(); }), { threshold: .2 });
+vids.forEach(b => vo.observe(b));
 $$('#gallery figure').forEach(f => f.onclick = () => openLB(`<img src="${f.dataset.full}" alt="">`));
 $$('#plans .plan-view').forEach(f => f.onclick = () => openLB(`<img src="${f.dataset.full}" alt="Floor plan">`));
 // phone: call or text
